@@ -11,9 +11,11 @@
 
 import os
 import json
+import time
 import torch
 import random
 import torch.nn as nn
+import scipy.io as sio
 import torch.optim as optim
 import matplotlib.pyplot as plt
 
@@ -239,7 +241,7 @@ def image_classification():
         num_workers = 0)
     
     # modeling
-    layers = '50'
+    layers = '34'
     net = build_resnet(layers, 20)
 
     # transfer learning
@@ -256,11 +258,13 @@ def image_classification():
 
     best_acc = 0.0
     save_path = os.path.join(trans_path, "resNet{}-train.pth".format(layers))
-    for epoch in range(5):
+    logging = {'trace': []}
+    for epoch in range(100):
 
         # train
         net.train()
         running_loss = 0.0
+        t1 = time.perf_counter()
         for step, data in enumerate(train_loader, start = 0):
             images, labels = data
             optimizer.zero_grad()
@@ -272,12 +276,13 @@ def image_classification():
             # print statistics
             running_loss += loss.item()
             # print train process
-            rate = (step+1)/len(train_loader)
+            rate = (step + 1) / len(train_loader)
             a = "=" * int(rate * 50)
             b = "." * int((1 - rate) * 50)
-            print("\rtrain loss: {:^3.0f}%[{}->{}]{:.4f}".format(
-                int(rate*100), a, b, loss), end = "")
+            print("\rprogress: [{}->{}] {:^3.0f}% train loss:{:.4f}".format(
+                a, b, int(rate * 100), loss), end = "")
         print()
+        t2 = time.perf_counter()
 
         # validate
         net.eval()
@@ -286,14 +291,20 @@ def image_classification():
             for val_data in valid_loader:
                 val_images, val_labels = val_data
                 outputs = net(val_images.to(device))
-                predict_y = torch.max(outputs, dim=1)[1]
+                predict_y = torch.max(outputs, dim = 1)[1]
                 acc += (predict_y == val_labels.to(device)).sum().item()
             val_accurate = acc / valid_num
             if val_accurate > best_acc:
                 best_acc = val_accurate
                 torch.save(net.state_dict(), save_path)
-            print('[epoch %d] train_loss: %.3f  test_accuracy: %.3f' %
-                (epoch + 1, running_loss / step, val_accurate))
+            print('[epoch %d] train_loss: %.3f test_accuracy: %.3f time: %.2fs'
+                  % (epoch + 1, running_loss / step, val_accurate, t2 - t1))
+        
+        # log
+        logging['trace'].append([epoch + 1, running_loss / step, val_accurate])
+    
+    path = os.path.join(os.getcwd(), 'log.mat')
+    sio.savemat(path, logging)
 
 
 if __name__ == "__main__":
