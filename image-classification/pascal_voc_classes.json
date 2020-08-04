@@ -9,14 +9,14 @@
     "cat": 7,
     "chair": 8,
     "cow": 9,
-    "dining_table": 10,
+    "diningtable": 10,
     "dog": 11,
     "horse": 12,
     "motorbike": 13,
     "person": 14,
-    "potted_plant": 15,
+    "pottedplant": 15,
     "sheep": 16,
     "sofa": 17,
     "train": 18,
-    "tv_monitor": 19
+    "tvmonitor": 19
 }
