@@ -167,14 +167,6 @@ class ResNet(nn.Module):
 
         return x
 
-def resnet34(num_classes = 1000, include_top = True):
-    return ResNet(BasicBlock, [3, 4, 6, 3], 
-                  num_classes = num_classes, include_top = include_top)
-
-def resnet101(num_classes = 1000, include_top = True):
-    return ResNet(Bottleneck, [3, 4, 23, 3], 
-                  num_classes = num_classes, include_top = include_top)
-
 def build_resnet(layers, num_classes = 1000, include_top = True):
     layer_dict = {}
     layer_dict['18' ] = [2, 2,  2, 2]
@@ -228,7 +220,7 @@ def image_classification():
     train_num = len(train_dataset)
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size = batch_size, shuffle = True, 
-        num_workers = 0)
+        num_workers = 2, pin_memory = True)
 
     # load validation data set
     batch_size = 64
@@ -238,14 +230,16 @@ def image_classification():
     valid_num = len(valid_dataset)
     valid_loader = torch.utils.data.DataLoader(
         valid_dataset, batch_size = batch_size, shuffle = False,
-        num_workers = 0)
+        num_workers = 2, pin_memory = True)
     
     # modeling
     layers = '34'
     net = build_resnet(layers, 20)
 
     # transfer learning
-    # weight_path = os.path.join(trans_path, "resnet{}-pre.pth".format(layers))
+    # weight_path = os.path.join(
+    #     trans_path, "pytorch", "resnet{}-pre.pth".format(layers)
+    # )
     # missing_keys, unexpected_keys = net.load_state_dict(
     #     torch.load(weight_path), strict = False)
     # inchannel = net.fc.in_features
@@ -253,13 +247,18 @@ def image_classification():
 
     net.to(device)
 
-    loss_function = nn.CrossEntropyLoss()
+    loss_function = nn.CrossEntropyLoss().to(device)
     optimizer = optim.Adam(net.parameters(), lr = 0.0001)
 
     best_acc = 0.0
-    save_path = os.path.join(trans_path, "resNet{}-train.pth".format(layers))
+    save_path = os.path.join(
+        trans_path, "my_path", "resNet{}-{}.pth".format(
+            layers, time.strftime("%Y-%m-%d", time.localtime()) 
+        )
+    )
     logging = {'trace': []}
-    for epoch in range(100):
+    
+    for epoch in range(10):
 
         # train
         net.train()
