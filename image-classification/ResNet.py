@@ -186,11 +186,13 @@ def build_resnet(layers, num_classes = 1000, include_top = True):
         exit(-1)
 
 # main function for image classification
-def image_classification():
+def image_classification(layers = '34', transfer = True):
 
     # root dir
     image_path = 'D:\\Data Set\\image_dataset\\VOCdevkit\\VOC_image_cls'
     trans_path = 'D:\\Data Set\\transfer_path'
+    store_path = os.path.join(trans_path, "my_path", "resNet{}-{}.pth".format(
+        layers, time.strftime("%Y-%m-%d", time.localtime())))
 
     # determine the device
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -233,31 +235,32 @@ def image_classification():
         num_workers = 2, pin_memory = True)
     
     # modeling
-    layers = '34'
-    net = build_resnet(layers, 20)
+    if transfer == True:  # transfer learning
+        mod = 'transfer'
+        net = build_resnet(layers)
+        weight_path = os.path.join(
+            trans_path, "pytorch", "resnet{}-pre.pth".format(layers)
+        )
+        missing_keys, unexpected_keys = net.load_state_dict(
+            torch.load(weight_path), strict = False)
+        inchannel = net.fc.in_features
+        net.fc = nn.Linear(inchannel, 20)
+    else:
+        mod = 'primary'
+        net = build_resnet(layers, 20)
 
-    # transfer learning
-    # weight_path = os.path.join(
-    #     trans_path, "pytorch", "resnet{}-pre.pth".format(layers)
-    # )
-    # missing_keys, unexpected_keys = net.load_state_dict(
-    #     torch.load(weight_path), strict = False)
-    # inchannel = net.fc.in_features
-    # net.fc = nn.Linear(inchannel, 20)
-
+    # gpu acceleration
     net.to(device)
 
+    # other parameters
     loss_function = nn.CrossEntropyLoss().to(device)
     optimizer = optim.Adam(net.parameters(), lr = 0.0001)
 
+    # logging
     best_acc = 0.0
-    save_path = os.path.join(
-        trans_path, "my_path", "resNet{}-{}.pth".format(
-            layers, time.strftime("%Y-%m-%d", time.localtime()) 
-        )
-    )
     logging = {'trace': []}
     
+    # main function
     for epoch in range(10):
 
         # train
@@ -271,7 +274,6 @@ def image_classification():
             loss = loss_function(logits, labels.to(device))
             loss.backward()
             optimizer.step()
-
             # print statistics
             running_loss += loss.item()
             # print train process
@@ -295,16 +297,20 @@ def image_classification():
             val_accurate = acc / valid_num
             if val_accurate > best_acc:
                 best_acc = val_accurate
-                torch.save(net.state_dict(), save_path)
+                torch.save(net.state_dict(), store_path)
             print('[epoch %d] train_loss: %.3f test_accuracy: %.3f time: %.2fs'
                   % (epoch + 1, running_loss / step, val_accurate, t2 - t1))
         
         # log
         logging['trace'].append([epoch + 1, running_loss / step, val_accurate])
     
-    path = os.path.join(os.getcwd(), 'log.mat')
+    path = os.path.join(os.getcwd(), 'log-resnet{}-{}-{}.mat'.format(
+        layers, mod, time.strftime("%Y-%m-%d", time.localtime())))
     sio.savemat(path, logging)
 
 
 if __name__ == "__main__":
-    image_classification()
+    
+    layers = ['18', '34', '50']
+    for layer in layers:
+        image_classification(layers = layer, transfer = True)
