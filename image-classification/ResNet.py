@@ -261,7 +261,7 @@ def image_classification(layers = '34', transfer = True):
     logging = {'trace': []}
     
     # main function
-    for epoch in range(10):
+    for epoch in range(250):
 
         # train
         net.train()
