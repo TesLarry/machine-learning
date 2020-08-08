@@ -121,6 +121,6 @@ class pascal_voc_data(object):
 if __name__ == "__main__":
     
     train_rate = 0.8
-    voc_root = 'd:\Data Set\image_dataset\VOCdevkit\VOC2012'
+    voc_root = '/Users/liupengxiang/Documents/Data/VOCdevkit/VOC2012'
     voc_data = pascal_voc_data(voc_root)
     voc_data.split(train_rate)

@@ -14,6 +14,7 @@ import json
 import time
 import torch
 import random
+import numpy as np
 import torch.nn as nn
 import scipy.io as sio
 import torch.optim as optim
@@ -189,11 +190,9 @@ def build_resnet(layers, num_classes = 1000, include_top = True):
 def image_classification(layers = '34', transfer = True):
 
     # root dir
-    image_path = 'D:\\Data Set\\image_dataset\\VOCdevkit\\VOC_image_cls'
-    trans_path = 'D:\\Data Set\\transfer_path'
-    store_path = os.path.join(trans_path, "my_path", "resNet{}-{}.pth".format(
-        layers, time.strftime("%Y-%m-%d", time.localtime())))
-
+    image_path = '/Users/liupengxiang/Documents/Data/VOCdevkit/VOC_image_cls'
+    trans_path = os.path.join(os.getcwd(), './path')
+    store_path = os.path.join(trans_path, "resNet{}-train.pth".format(layers))
     # determine the device
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(device)
@@ -239,7 +238,7 @@ def image_classification(layers = '34', transfer = True):
         mod = 'transfer'
         net = build_resnet(layers)
         weight_path = os.path.join(
-            trans_path, "pytorch", "resnet{}-pre.pth".format(layers)
+            trans_path, "resnet{}-pytorch.pth".format(layers)
         )
         missing_keys, unexpected_keys = net.load_state_dict(
             torch.load(weight_path), strict = False)
@@ -261,7 +260,7 @@ def image_classification(layers = '34', transfer = True):
     logging = {'trace': []}
     
     # main function
-    for epoch in range(250):
+    for epoch in range(20):
 
         # train
         net.train()
@@ -309,41 +308,47 @@ def image_classification(layers = '34', transfer = True):
     sio.savemat(path, logging)
 
 
-if __name__ == "__main__":
-    '''
-    layers = ['18', '34', '50']
-    for layer in layers:
-        image_classification(layers = layer, transfer = True)
-    '''
-    # predict
+# prediction
+def predict(layers = '34', files = 'cat.jpg'):
+    
     data_transform = transforms.Compose(
         [transforms.Resize(256),
         transforms.CenterCrop(224),
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
-    img = Image.open("./cat.jpg")
-    plt.imshow(img)
-    # [N, C, H, W]
+    
+    img = Image.open(os.path.join(os.getcwd(), "picture", files))
     img = data_transform(img)
-    # expand batch dimension
     img = torch.unsqueeze(img, dim = 0)
 
-    # read class_indict
     try:
         json_file = open('./pascal_voc_classes.json', 'r')
-        class_indict = json.load(json_file)
+        dict_file = json.load(json_file)
+        dict_file = {value:key for key, value in dict_file.items()}
     except Exception as e:
         print(e)
         exit(-1)
     
     model = build_resnet('34', 20)
-    model_weight_path = 'D:\\Data Set\\transfer_path\\my_path\\resNet34-2020-08-07.pth'
+    model_weight_path = os.path.join(os.getcwd(), "path/resnet34-train.pth")
     model.load_state_dict(torch.load(model_weight_path))
     model.eval()
     with torch.no_grad():
         # predict class
-        output = torch.squeeze(model(img))
+        output  = torch.squeeze(model(img))
         predict = torch.softmax(output, dim = 0)
-        predict_cla = torch.argmax(predict).numpy()
-    print(class_indict[str(predict_cla)], predict[predict_cla].numpy())
-    plt.show()
+        predict = predict.numpy()
+
+    print(dict_file[np.argmax(predict)], np.max(predict))
+    
+
+if __name__ == "__main__":
+    
+    # train
+    # layers = ['34']
+    # for layer in layers:
+    #     image_classification(layers = layer, transfer = True)
+    
+    # test
+    predict(layers = '34', files = 'plane.jpg')
+    
