@@ -192,7 +192,7 @@ def image_classification(layers = '34', transfer = True):
     # root dir
     image_path = '/Users/liupengxiang/Documents/Data/VOCdevkit/VOC_image_cls'
     trans_path = os.path.join(os.getcwd(), './path')
-    store_path = os.path.join(trans_path, "resNet{}-train.pth".format(layers))
+    store_path = os.path.join(trans_path, "resnet{}-train.pth".format(layers))
     # determine the device
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(device)
@@ -344,11 +344,11 @@ def predict(layers = '34', files = 'cat.jpg'):
 
 if __name__ == "__main__":
     
-    # train
-    # layers = ['34']
-    # for layer in layers:
-    #     image_classification(layers = layer, transfer = True)
+    train
+    layers = ['18','34','50']
+    for layer in layers:
+        image_classification(layers = layer, transfer = True)
     
     # test
-    predict(layers = '34', files = 'plane.jpg')
+    predict(layers = '34', files = 'cat.jpg')
     
